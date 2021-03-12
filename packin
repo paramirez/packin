@@ -52,7 +52,7 @@ async function syncRepos(dir, path, array = []) {
 		 * @type { { name: string, start?: string[], opt?: string }[] }
 		 */
 		const result = JSON.parse(data.toString())
-		const packRoute = getPath('path')
+		const packRoute = getPath('pack')
 
 		if (!existsRoute(packRoute)) createRoute(packRoute)
 
