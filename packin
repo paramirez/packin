@@ -1,0 +1,71 @@
+#!/usr/bin/env node
+const { exec } = require("child_process");
+const fs = require("fs")
+const path = require('path');
+
+function run(command) {
+	return new Promise((res, rej) => {
+		exec(command, (err, stdout, stderr) => {
+			if (err) res(err)
+			else if (typeof (stderr) != "string") rej(stderr)
+			else res(stdout)
+		});
+	})
+}
+
+function getPath(cupath, newdir = "") {
+	return path.join(cupath, newdir);
+}
+
+function existsRoute(route) {
+	return fs.existsSync(route)
+}
+
+function createRoute(route) {
+	return fs.mkdirSync(route, { recursive: true })
+}
+
+/**
+ * 
+ * @param { 'start' | 'opt' } dir
+ * @param { string } path
+ * @param { string[] } array 
+ */
+async function syncRepos(dir, path, array = []) {
+	if (array && Array.isArray(array)) {
+		console.log('----', dir)
+		const route = getPath(path, dir)
+		if (!existsRoute(route)) createRoute(route)
+
+		for (let repo of array) {
+			console.log("--------", repo)
+			const repoRoute = getPath(route, repo)
+			if (!existsRoute(repoRoute)) await run('git clone https://github.com/' + repo + ' ' + repoRoute)
+		}
+	}
+}
+
+(
+	async () => {
+		const data = fs.readFileSync('./packs.json')
+		/**
+		 * @type { { name: string, start?: string[], opt?: string }[] }
+		 */
+		const result = JSON.parse(data.toString())
+		const packRoute = getPath('path')
+
+		if (!existsRoute(packRoute)) createRoute(packRoute)
+
+		for (let o of result) {
+			const name = o.name ? o.name : 'default'
+			console.log('-', name)
+			const routeChildPack = getPath(packRoute, name)
+
+			if (!existsRoute(routeChildPack)) createRoute(routeChildPack)
+
+			await syncRepos('start', routeChildPack, o.start)
+			await syncRepos('opt', routeChildPack, o.opt)
+
+		}
+	}
+)().then(() => console.log('end'))
